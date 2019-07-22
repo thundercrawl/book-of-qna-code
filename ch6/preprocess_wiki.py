@@ -5,8 +5,8 @@
 # Copyright (c) 2017 <> All Rights Reserved
 #
 #
-# Author: Hai Liang Wang
-# Date: 2018-06-04:18:56:20
+# Author: thunder
+# Date: 2019-07-22:18:56:20
 #
 #===============================================================================
 
@@ -16,13 +16,11 @@
 from __future__ import print_function
 from __future__ import division
 
-__copyright__ = "Copyright (c) 2017 . All Rights Reserved"
-__author__    = "Xu Ming Lin<>, Hai Liang Wang<hailiang.hl.wang@gmail.com>,"
-__date__      = "2018-06-04:18:56:20"
-
 
 import os
 import sys
+import threading
+from datetime import datetime as dt
 curdir = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(curdir)
 
@@ -32,7 +30,22 @@ if sys.version_info[0] < 3:
     sys.stdout = stdout
 else:
     unicode = str
-
+log_file_path="c:/trace.log"
+logfile=None
+def loginfo(*log):
+    global log_file_path
+    global logfile
+    if log_file_path != "" and logfile == None:
+        print("load log trace, file path:" + log_file_path)
+        logfile = open(log_file_path, "a+")
+    else:
+        print("use default path d:/trace.log")
+        logfile = open("c:/trace.log", "a+")
+    logs = " (" + threading.current_thread().getName() + ")" + " message:"
+    for l in log:
+        logs += str(l)
+    currentDate = dt.now()
+    #logfile.write("[ " + str(currentDate) + " ]" + logs + "\n")
 # Get ENV
 ENVIRON = os.environ.copy()
 
@@ -89,11 +102,14 @@ def build_vocab(corpus, topk=None):
         qid, q, aid, a, label = line.strip().split('\t')
         vocab.update(q.split())
         vocab.update(a.split())
+        print(vocab['how'])
     if topk:
         vocab = vocab.most_common(topk)
     else:
         vocab = dict(vocab.most_common()).keys()
     vocab = {_ : i+2 for i, _ in enumerate(vocab)}
+    print(vocab.__len__())
+    print('how'+str(vocab['how']))
     vocab['<PAD>'] = 0
     vocab['<UNK>'] = 1
     reverse_vocab = dict(zip(vocab.values(), vocab.keys()))
@@ -136,6 +152,7 @@ def pairwise_data(corpus):
             pairwise_corpus[qid]['neg'].append(a)
         else:
             pairwise_corpus[qid]['pos'].append(a)
+    print(pairwise_corpus["Q1"])
     real_pairwise_corpus = []
     for qid in pairwise_corpus:
         q = pairwise_corpus[qid]['q']
@@ -181,7 +198,7 @@ transformed_test_corpus = transform(test_processed_qa, word2id)
 pointwise_test_corpus = pointwise_data(transformed_test_corpus, keep_ids=True)
 pairwise_test_corpus = pointwise_data(transformed_test_corpus, keep_ids=True)
 listwise_test_corpus = listwise_data(transformed_test_corpus)
-
+#loginfo(word2id)
 
 with open(os.path.join(processed_data_path, 'vocab.pkl'), 'w') as fw:
     pkl.dump([word2id, id2word], fw)

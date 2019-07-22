@@ -3,6 +3,10 @@ import tensorflow as tf
 import numpy as np
 import os
 import sys
+import logging as logging
+
+logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
+logger_name="qacnn"
 stdout = sys.stdout
 reload(sys)
 sys.stdout = stdout
@@ -10,7 +14,6 @@ sys.stdout = stdout
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 # Get ENV
 ENVIRON = os.environ.copy()
-
 import cPickle as pkl
 from utils import *
 from models import QACNN
@@ -116,7 +119,39 @@ def evaluate(sess, model, corpus, config):
     # print('Eval loss:{}'.format(total_loss / count))
     return 'MAP:{}, MRR:{}'.format(MAP, MRR)
                 
+def predict(sess, model, corpus, config):
+    iterator = Iterator(corpus)
 
+    count = 0
+    total_qids = []
+    total_aids = []
+    total_pred = []
+    total_labels = []
+    total_loss = 0.
+    for batch_x in iterator.next(config.batch_size, shuffle=False):
+        batch_qids, batch_q, batch_aids, batch_ap, labels = zip(*batch_x)
+        batch_q = np.asarray(batch_q)
+        batch_ap = np.asarray(batch_ap)
+        q_ap_cosine, loss = sess.run([model.q_ap_cosine, model.loss], 
+                           feed_dict={model.q:batch_q, 
+                                      model.aplus:batch_ap, 
+                                      model.aminus:batch_ap,
+                                      model.keep_prob:1.})
+        total_loss += loss
+        count += 1
+        total_qids.append(batch_qids)
+        total_aids.append(batch_aids)
+        total_pred.append(q_ap_cosine)
+        total_labels.append(labels)
+        # print(batch_qids[0], [id2word[_] for _ in batch_q[0]], 
+        #     batch_aids[0], [id2word[_] for _ in batch_ap[0]])
+    total_qids = np.concatenate(total_qids, axis=0)
+    total_aids = np.concatenate(total_aids, axis=0)
+    total_pred = np.concatenate(total_pred, axis=0)
+    total_labels = np.concatenate(total_labels, axis=0)
+    MAP, MRR = eval_map_mrr(total_qids, total_aids, total_pred, total_labels)
+    # print('Eval loss:{}'.format(total_loss / count))
+    return 'MAP:{}, MRR:{}'.format(MAP, MRR)
 def test(corpus, config):
     with tf.Session(config=config.cf) as sess:
         model = QACNN(config)
@@ -124,9 +159,13 @@ def test(corpus, config):
         saver.restore(sess, tf.train.latest_checkpoint(model_path))
         print('[test] ' + evaluate(sess, model, corpus, config))
                     
-
+def predict(corpus,config):
+    with tf.Session(config=config.cf) as sess:
+        model = QACNN(config)
+        saver = tf.train.Saver()
+        saver.restore(sess, tf.train.latest_checkpoint(model_path))
+        print('[test] ' + evaluate(sess, model, corpus, config))
 def main(args):
-
     max_q_length = 25
     max_a_length = 90
     with open(os.path.join(processed_data_path, 'pairwise_corpus.pkl'), 'r') as fr:
@@ -134,9 +173,10 @@ def main(args):
 
     with open(os.path.join(processed_data_path, 'pointwise_corpus.pkl'), 'r') as fr:
         eval_train_corpus, _, _ = pkl.load(fr)
-
+   
+    logging.getLogger(logger_name).info("------------------------------------>load embeddings")
     embeddings = build_embedding(embedding_path, word2id)
-    
+    logging.getLogger(logger_name).info(embeddings)
     train_q, train_ap, train_an = zip(*train_corpus)
     train_q = padding(train_q, max_q_length)
     train_ap = padding(train_ap, max_a_length)

@@ -1,7 +1,9 @@
 # -*- encoding:utf-8 -*-
 import numpy as np
 import tensorflow as tf
+import logging
 
+logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
 
 def padding(data, max_len):
     return tf.keras.preprocessing.sequence.pad_sequences(data, max_len, padding='post', truncating='post')
@@ -67,6 +69,7 @@ def build_embedding(in_file, word_dict):
 	# 构建预训练的embedding矩阵
     num_words = max(word_dict.values()) + 1
     dim = int(in_file.split('.')[-2][:-1])
+
     embeddings = np.zeros((num_words, dim))
 
     if in_file is not None:
