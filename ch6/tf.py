@@ -6,14 +6,16 @@ tf.reduce_sum(x, 1)  # [3, 3] ##[2, 2, 2] by colunm [1+1,1+1,1+1]
 tf.reduce_sum(x, [0, 1])  # 6 ## all together 1+1 1+1 1+1 = 6, idea by column then row, or by row then column
 
 #cosine
+def multiply(a,b):
+    return tf.multiply(a,b)
 a = tf.placeholder(tf.float32, shape=[None], name="input_placeholder_a")
 b = tf.placeholder(tf.float32, shape=[None], name="input_placeholder_b")
 normalize_a = tf.nn.l2_normalize(a,0)        
 normalize_b = tf.nn.l2_normalize(b,0)
 cos_similarity=tf.reduce_sum(tf.multiply(normalize_a,normalize_b),0)
-multiply=tf.multiply(a,b)
+multiply=multiply(a,b)
 sess=tf.Session()
-cos_sim=sess.run([cos_similarity,multiply],feed_dict={a:[1.0, 2, 3],b:[3.0, 2, 1]})
+cossim,multi=sess.run([cos_similarity,multiply],feed_dict={a:[1.0, 2, 3],b:[3.0, 2, 1]})
 
 #lastnest api
 import tensorflow as tf
