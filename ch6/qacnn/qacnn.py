@@ -21,30 +21,30 @@ from models import QACNN
 
 class QACNNConfig(object):
     def __init__(self, vocab_size, embeddings=None):
-        # 输入问题(句子)长度
+        # max question length
         self.max_q_length = 200
-        # 输入答案长度
+        # max answer length
         self.max_a_length = 200
-        # 循环数
+        # epochs
         self.num_epochs = 100
-        # batch大小
+        # batch size
         self.batch_size = 128
-        # 词表大小
+        # vocabulary size
         self.vocab_size = vocab_size
-        # 词向量大小
+        # worde embedding size(dimession)
         self.embeddings = embeddings
         self.embedding_size = 100
         if self.embeddings is not None:
             self.embedding_size = embeddings.shape[1]
-        # 不同类型的filter,相当于1-gram,2-gram,3-gram和5-gram
+        # filter size: like 1-gram or 3,5 gram
         self.filter_sizes = [1, 2, 3, 5, 7, 9]
-        # 隐层大小
+        # hidden layer size
         self.hidden_size = 128
-        # 每种filter的数量
+        # filter 
         self.num_filters = 128
         self.l2_reg_lambda = 0.
         self.keep_prob = 0.5
-        # 学习率
+        # lr
         self.lr = 0.001
         # margin
         self.m = 0.5
@@ -94,7 +94,16 @@ def evaluate(sess, model, corpus, config):
     total_pred = []
     total_labels = []
     total_loss = 0.
+    tryone= 0
     for batch_x in iterator.next(config.batch_size, shuffle=False):
+        # if(tryone == 0):
+        #     batch_qids, batch_q, batch_aids, batch_ap, labels = zip(*batch_x)
+        #     print(batch_qids)
+        #     print(batch_q)
+        #     print(batch_aids)
+        #     print(batch_ap)
+        #     print(labels)
+        #     tryone+=1
         batch_qids, batch_q, batch_aids, batch_ap, labels = zip(*batch_x)
         batch_q = np.asarray(batch_q)
         batch_ap = np.asarray(batch_ap)
@@ -109,8 +118,8 @@ def evaluate(sess, model, corpus, config):
         total_aids.append(batch_aids)
         total_pred.append(q_ap_cosine)
         total_labels.append(labels)
-        # print(batch_qids[0], [id2word[_] for _ in batch_q[0]], 
-        #     batch_aids[0], [id2word[_] for _ in batch_ap[0]])
+        #print(batch_qids[0], [id2word[_] for _ in batch_q[0]], 
+         #    batch_aids[0], [id2word[_] for _ in batch_ap[0]])
     total_qids = np.concatenate(total_qids, axis=0)
     total_aids = np.concatenate(total_aids, axis=0)
     total_pred = np.concatenate(total_pred, axis=0)
@@ -119,39 +128,34 @@ def evaluate(sess, model, corpus, config):
     # print('Eval loss:{}'.format(total_loss / count))
     return 'MAP:{}, MRR:{}'.format(MAP, MRR)
                 
-def predict(sess, model, corpus, config):
-    iterator = Iterator(corpus)
-
-    count = 0
-    total_qids = []
-    total_aids = []
-    total_pred = []
-    total_labels = []
-    total_loss = 0.
-    for batch_x in iterator.next(config.batch_size, shuffle=False):
-        batch_qids, batch_q, batch_aids, batch_ap, labels = zip(*batch_x)
-        batch_q = np.asarray(batch_q)
-        batch_ap = np.asarray(batch_ap)
-        q_ap_cosine, loss = sess.run([model.q_ap_cosine, model.loss], 
-                           feed_dict={model.q:batch_q, 
-                                      model.aplus:batch_ap, 
-                                      model.aminus:batch_ap,
-                                      model.keep_prob:1.})
-        total_loss += loss
-        count += 1
-        total_qids.append(batch_qids)
-        total_aids.append(batch_aids)
-        total_pred.append(q_ap_cosine)
-        total_labels.append(labels)
-        # print(batch_qids[0], [id2word[_] for _ in batch_q[0]], 
-        #     batch_aids[0], [id2word[_] for _ in batch_ap[0]])
-    total_qids = np.concatenate(total_qids, axis=0)
-    total_aids = np.concatenate(total_aids, axis=0)
-    total_pred = np.concatenate(total_pred, axis=0)
-    total_labels = np.concatenate(total_labels, axis=0)
-    MAP, MRR = eval_map_mrr(total_qids, total_aids, total_pred, total_labels)
+def predictShort(sess, model, sentence, config):
+    toids = sentence.split()
+    result = sess.run(model.sum_f,{model.sum_a:1,model.sum_b:2})
+    print("result:"+str(result))
+    # for batch_x in iterator.next(config.batch_size, shuffle=False):
+    #     batch_qids, batch_q, batch_aids, batch_ap, labels = zip(*batch_x)
+    #     batch_q = np.asarray(batch_q)
+    #     batch_ap = np.asarray(batch_ap)
+    #     q_ap_cosine, loss = sess.run([model.q_ap_cosine, model.loss], 
+    #                        feed_dict={model.q:batch_q, 
+    #                                   model.aplus:batch_ap, 
+    #                                   model.aminus:batch_ap,
+    #                                   model.keep_prob:1.})
+    #     total_loss += loss
+    #     count += 1
+    #     total_qids.append(batch_qids)
+    #     total_aids.append(batch_aids)
+    #     total_pred.append(q_ap_cosine)
+    #     total_labels.append(labels)
+    #     # print(batch_qids[0], [id2word[_] for _ in batch_q[0]], 
+    #     #     batch_aids[0], [id2word[_] for _ in batch_ap[0]])
+    # total_qids = np.concatenate(total_qids, axis=0)
+    # total_aids = np.concatenate(total_aids, axis=0)
+    # total_pred = np.concatenate(total_pred, axis=0)
+    # total_labels = np.concatenate(total_labels, axis=0)
+    # MAP, MRR = eval_map_mrr(total_qids, total_aids, total_pred, total_labels)
     # print('Eval loss:{}'.format(total_loss / count))
-    return 'MAP:{}, MRR:{}'.format(MAP, MRR)
+    return result
 def test(corpus, config):
     with tf.Session(config=config.cf) as sess:
         model = QACNN(config)
@@ -164,25 +168,23 @@ def predict(corpus,config):
         model = QACNN(config)
         saver = tf.train.Saver()
         saver.restore(sess, tf.train.latest_checkpoint(model_path))
-        print('[test] ' + evaluate(sess, model, corpus, config))
+        print('[predict] ' + predictShort(sess, model, corpus, config))
 def main(args):
     max_q_length = 25
     max_a_length = 90
     with open(os.path.join(processed_data_path, 'pairwise_corpus.pkl'), 'r') as fr:
         train_corpus, val_corpus, test_corpus = pkl.load(fr)
-
+    print(train_corpus[0])
     with open(os.path.join(processed_data_path, 'pointwise_corpus.pkl'), 'r') as fr:
         eval_train_corpus, _, _ = pkl.load(fr)
    
-    logging.getLogger(logger_name).info("------------------------------------>load embeddings")
+    
     embeddings = build_embedding(embedding_path, word2id)
-    logging.getLogger(logger_name).info(embeddings)
     train_q, train_ap, train_an = zip(*train_corpus)
     train_q = padding(train_q, max_q_length)
     train_ap = padding(train_ap, max_a_length)
     train_an = padding(train_an, max_a_length)
     train_corpus = zip(train_q, train_ap, train_an)
-
     val_qids, val_q, val_aids, val_ap, labels = zip(*val_corpus)
     val_q = padding(val_q, max_q_length)
     val_ap = padding(val_ap, max_a_length)
@@ -205,6 +207,8 @@ def main(args):
         train(train_corpus, config, val_corpus, eval_train_corpus)
     elif args.test:
         test(test_corpus, config)
+    elif args.predict:
+        predict(test_corpus, config)
 
 
 if __name__ == '__main__':
@@ -212,6 +216,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--train",  help="whether to train", action='store_true')
     parser.add_argument("--test",  help="whether to test", action='store_true')
+    parser.add_argument("--predict",  help="predict sentence", action='store_true')
     args = parser.parse_args()
 
     raw_data_path = '../data/WikiQA/raw'

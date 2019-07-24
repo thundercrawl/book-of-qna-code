@@ -3,13 +3,14 @@ import numpy as np
 import tensorflow as tf
 import logging
 
+
 logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', level=logging.INFO)
 
 def padding(data, max_len):
     return tf.keras.preprocessing.sequence.pad_sequences(data, max_len, padding='post', truncating='post')
 
 def eval_map_mrr(qids, aids, preds, labels):
-	# 衡量map指标和mrr指标
+	# MAP MRR
     dic = dict()
     pre_dic = dict()
     for qid, aid, pred, label in zip(qids, aids, preds, labels):
@@ -66,10 +67,9 @@ def eval_map_mrr(qids, aids, preds, labels):
     return MAP, MRR
 
 def build_embedding(in_file, word_dict):
-	# 构建预训练的embedding矩阵
+	# build embedding using Standford word embedding
     num_words = max(word_dict.values()) + 1
     dim = int(in_file.split('.')[-2][:-1])
-
     embeddings = np.zeros((num_words, dim))
 
     if in_file is not None:
@@ -98,10 +98,16 @@ def build_embedding(in_file, word_dict):
                      (pre_trained, pre_trained * 100.0 / num_words))
     return embeddings.astype(np.float32)
 
+def trasformText(inList,wordDic):
+    rt="@NOTHINGATALL@"
+    a=[]
+    for item in inList:
+        a.append(wordDic[item])
+    return " ".join(a)
 
 class Iterator(object):
     """
-    数据迭代器
+    iterator
     """
     def __init__(self, x):
         self.x = x
