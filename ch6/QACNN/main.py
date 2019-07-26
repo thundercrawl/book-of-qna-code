@@ -96,14 +96,15 @@ def evaluate(sess, model, corpus, config):
     total_loss = 0.
     tryone= 0
     for batch_x in iterator.next(config.batch_size, shuffle=False):
-        # if(tryone == 0):
-        #     batch_qids, batch_q, batch_aids, batch_ap, labels = zip(*batch_x)
-        #     print(batch_qids)
-        #     print(batch_q)
-        #     print(batch_aids)
-        #     print(batch_ap)
-        #     print(labels)
-        #     tryone+=1
+        if(tryone == 0):
+            batch_qids, batch_q, batch_aids, batch_ap, labels = zip(*batch_x)
+            #print(batch_qids)
+            #print(batch_q)
+            print(type(batch_q))
+            #print(batch_aids)
+            #print(batch_ap)
+            #print(labels)
+            tryone+=1
         batch_qids, batch_q, batch_aids, batch_ap, labels = zip(*batch_x)
         batch_q = np.asarray(batch_q)
         batch_ap = np.asarray(batch_ap)
@@ -125,37 +126,32 @@ def evaluate(sess, model, corpus, config):
     total_pred = np.concatenate(total_pred, axis=0)
     total_labels = np.concatenate(total_labels, axis=0)
     MAP, MRR = eval_map_mrr(total_qids, total_aids, total_pred, total_labels)
-    # print('Eval loss:{}'.format(total_loss / count))
     return 'MAP:{}, MRR:{}'.format(MAP, MRR)
                 
-def predictShort(sess, model, sentence, config):
-    toids = sentence.split()
-    result = sess.run(model.sum_f,{model.sum_a:1,model.sum_b:2})
-    print("result:"+str(result))
-    # for batch_x in iterator.next(config.batch_size, shuffle=False):
-    #     batch_qids, batch_q, batch_aids, batch_ap, labels = zip(*batch_x)
-    #     batch_q = np.asarray(batch_q)
-    #     batch_ap = np.asarray(batch_ap)
-    #     q_ap_cosine, loss = sess.run([model.q_ap_cosine, model.loss], 
-    #                        feed_dict={model.q:batch_q, 
-    #                                   model.aplus:batch_ap, 
-    #                                   model.aminus:batch_ap,
-    #                                   model.keep_prob:1.})
-    #     total_loss += loss
-    #     count += 1
-    #     total_qids.append(batch_qids)
-    #     total_aids.append(batch_aids)
-    #     total_pred.append(q_ap_cosine)
-    #     total_labels.append(labels)
-    #     # print(batch_qids[0], [id2word[_] for _ in batch_q[0]], 
-    #     #     batch_aids[0], [id2word[_] for _ in batch_ap[0]])
-    # total_qids = np.concatenate(total_qids, axis=0)
-    # total_aids = np.concatenate(total_aids, axis=0)
-    # total_pred = np.concatenate(total_pred, axis=0)
-    # total_labels = np.concatenate(total_labels, axis=0)
-    # MAP, MRR = eval_map_mrr(total_qids, total_aids, total_pred, total_labels)
-    # print('Eval loss:{}'.format(total_loss / count))
-    return result
+def predictShort(sess, model, sentence, config,in_file,corpus):
+    iterator = Iterator(corpus)
+    q=buildQ(sentence,word2id)
+    listq=[]
+    for x in range(config.batch_size):
+        listq.append(q)
+    list_q=tuple(listq)
+    for batch_x in iterator.next(config.batch_size, shuffle=False):
+        batch_qids, batch_q, batch_aids, batch_ap, labels = zip(*batch_x)
+        batch_q = np.asarray(list_q)
+        batch_ap = np.asarray(batch_ap)
+        q_ap_cosine, loss = sess.run([model.q_ap_cosine, model.loss], 
+                           feed_dict={model.q:batch_q, 
+                                      model.aplus:batch_ap, 
+                                      model.aminus:batch_ap,
+                                      model.keep_prob:1.})
+    
+    #print(q_ap_cosine)
+    total_qids = np.concatenate(total_qids, axis=0)
+    total_aids = np.concatenate(total_aids, axis=0)
+    total_pred = np.concatenate(total_pred, axis=0)
+    total_labels = np.concatenate(total_labels, axis=0)
+    
+
 def test(corpus, config):
     with tf.Session(config=config.cf) as sess:
         model = QACNN(config)
@@ -163,18 +159,17 @@ def test(corpus, config):
         saver.restore(sess, tf.train.latest_checkpoint(model_path))
         print('[test] ' + evaluate(sess, model, corpus, config))
                     
-def predict(corpus,config):
+def predict(sentence,config,in_file,corpus):
     with tf.Session(config=config.cf) as sess:
         model = QACNN(config)
         saver = tf.train.Saver()
         saver.restore(sess, tf.train.latest_checkpoint(model_path))
-        print('[predict] ' + predictShort(sess, model, corpus, config))
+        print('[predict] ' + predictShort(sess, model, sentence, config,in_file,corpus))
 def main(args):
     max_q_length = 25
     max_a_length = 90
     with open(os.path.join(processed_data_path, 'pairwise_corpus.pkl'), 'r') as fr:
         train_corpus, val_corpus, test_corpus = pkl.load(fr)
-    print(train_corpus[0])
     with open(os.path.join(processed_data_path, 'pointwise_corpus.pkl'), 'r') as fr:
         eval_train_corpus, _, _ = pkl.load(fr)
    
@@ -182,7 +177,10 @@ def main(args):
     embeddings = build_embedding(embedding_path, word2id)
     train_q, train_ap, train_an = zip(*train_corpus)
     train_q = padding(train_q, max_q_length)
+    print("train_q")
+    print(train_q[0])
     train_ap = padding(train_ap, max_a_length)
+    print(train_ap[0])
     train_an = padding(train_an, max_a_length)
     train_corpus = zip(train_q, train_ap, train_an)
     val_qids, val_q, val_aids, val_ap, labels = zip(*val_corpus)
@@ -208,27 +206,27 @@ def main(args):
     elif args.test:
         test(test_corpus, config)
     elif args.predict:
-        predict(test_corpus, config)
+        print(args.predict)
+        predict(args.predict, config,embedding_path,train_corpus)
 
 
 if __name__ == '__main__':
     import argparse
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("--train",  help="whether to train", action='store_true')
     parser.add_argument("--test",  help="whether to test", action='store_true')
-    parser.add_argument("--predict",  help="predict sentence", action='store_true')
+    parser.add_argument("--predict", "-i", default="what city is oregon state university in" , help="predict sentence",type=str)
     args = parser.parse_args()
-
     raw_data_path = '../data/WikiQA/raw'
     processed_data_path = '../data/WikiQA/processed'
     processed_data_pkl = os.path.join(processed_data_path, 'vocab.pkl')
-    embedding_path = '../data/embedding/glove.6B.300d.txt'
+    embedding_path = '../data/embedding/glove.6B.100d.txt'
     model_path = 'models'
 
     if 'GLOVE_EMBEDDING_6B' in ENVIRON:
         embedding_path = ENVIRON['GLOVE_EMBEDDING_6B']
 
-    print("embedding file: %s" % embedding_path)
 
     if not os.path.exists(processed_data_pkl): 
         raise BaseException("data [%] not exist, run ch6/preprocess_wiki.py first." % processed_data_pkl)

@@ -10,6 +10,7 @@
 #
 #===============================================================================
 from QACNN.utils import trasformText
+from QACNN.utils import covertQ2M
 from gensim.models import word2vec
 
 # 引入日志配置
@@ -35,3 +36,7 @@ with open(os.path.join(processed_data_path, 'vocab.pkl'), 'r') as fr:
         wordDic,id2word = pkl.load(fr)
 inList=[20935, 15080, 11093, 22327, 25169, 3165, 11104]
 print(trasformText(inList,id2word))
+embedding_path="./data/embedding/glove.6B.100d.txt"
+
+sentence="what city is oregon state university in"
+print(covertQ2M(embedding_path,sentence))

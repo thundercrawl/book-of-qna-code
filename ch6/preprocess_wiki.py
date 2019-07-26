@@ -108,7 +108,6 @@ def build_vocab(corpus, topk=None):
     else:
         vocab = dict(vocab.most_common()).keys()
     vocab = {_ : i+2 for i, _ in enumerate(vocab)}
-    print(vocab.__len__())
     print('how'+str(vocab['how']))
     vocab['<PAD>'] = 0
     vocab['<UNK>'] = 1
@@ -123,6 +122,9 @@ def transform(corpus, word2id, unk_id=1):
         q = [word2id.get(w, unk_id) for w in q.split()]
         a = [word2id.get(w, unk_id) for w in a.split()]
         transformed_corpus.append([qid, q, aid, a, int(label)])
+    print("------->")
+    print(transformed_corpus[0])
+    print("<-------")
     return transformed_corpus
 
 # 得到pointwise形式的数据，即(Q, A, label)

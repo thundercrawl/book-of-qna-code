@@ -104,6 +104,22 @@ def trasformText(inList,wordDic):
     for item in inList:
         a.append(wordDic[item])
     return " ".join(a)
+def buildQ(sentence,wordDic):
+    q=[]
+    for word in sentence:
+        q.append(wordDic[word])
+    return q
+def covertQ2M(in_file,sentence):
+    dim = int(in_file.split('.')[-2][:-1])
+    word_dict = { sentence.split()[i]:i for i in range(0, len(sentence.split()) ) }
+    embeddings = np.zeros((max(word_dict.values()) + 1, dim))
+    for line in open(in_file).readlines():
+            sp = line.split()
+            assert len(sp) == dim + 1
+            if sp[0] in word_dict:
+                embeddings[word_dict[sp[0]]] = [float(x) for x in sp[1:]]
+    return embeddings.astype(np.float32)
+
 
 class Iterator(object):
     """
